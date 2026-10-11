@@ -1,6 +1,6 @@
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
-import { ConflictError, NotFoundError, ValidationError } from "./errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { router } from "./routes";
 
 export function createApp() {
@@ -11,6 +11,7 @@ export function createApp() {
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
+    if (err instanceof ForbiddenError) return res.status(403).json({ error: err.message });
     if (err instanceof ConflictError) return res.status(409).json({ error: err.message });
     if (err instanceof ValidationError) return res.status(400).json({ error: err.message });
     console.error(err);

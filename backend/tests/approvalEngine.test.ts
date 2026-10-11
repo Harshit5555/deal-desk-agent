@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { evaluate } from "../src/services/approvalEngine";
+import { canApprove, evaluate } from "../src/services/approvalEngine";
+import { updatePolicy } from "../src/services/policyService";
 import { dealStore, resetStore } from "../src/store";
 
 describe("approvalEngine.evaluate", () => {
@@ -43,5 +44,54 @@ describe("approvalEngine.evaluate", () => {
   it("does not need finance on a large deal with a small discount", () => {
     const deal = dealStore.get("d-107")!;
     expect(evaluate(deal, 5).decision).toBe("auto_approved");
+  });
+
+  describe("canApprove", () => {
+    it.each([
+      ["manager", "manager", true],
+      ["manager", "finance", false],
+      ["manager", "vp", false],
+      ["finance", "manager", true],
+      ["finance", "finance", true],
+      ["finance", "vp", false],
+      ["vp", "manager", true],
+      ["vp", "finance", true],
+      ["vp", "vp", true],
+    ] as const)("a %s approving a %s deal -> %s", (approver, required, expected) => {
+      expect(canApprove(approver, required)).toBe(expected);
+    });
+  });
+
+  describe("after the policy is changed", () => {
+    it("applies a lowered manager threshold to the next discount", () => {
+      const deal = dealStore.get("d-105")!; // $22,000
+      expect(evaluate(deal, 7).decision).toBe("auto_approved");
+
+      updatePolicy({ managerApprovalAbovePct: 5 });
+
+      const result = evaluate(deal, 7);
+      expect(result.decision).toBe("needs_approval");
+      expect(result.requiredLevel).toBe("manager");
+      expect(result.reason).toBe("Discount 7% exceeds manager threshold (5%)");
+    });
+
+    it("applies a lowered finance limit to the next discount", () => {
+      const deal = dealStore.get("d-106")!; // $90,000
+      expect(evaluate(deal, 14).requiredLevel).toBe("manager");
+
+      updatePolicy({ financeReviewAboveAmount: 50000 });
+
+      expect(evaluate(deal, 14).requiredLevel).toBe("finance");
+    });
+
+    it("returns the policy it used", () => {
+      updatePolicy({ managerApprovalAbovePct: 5 });
+      const result = evaluate(dealStore.get("d-105")!, 7);
+      expect(result.policy).toEqual({
+        managerApprovalAbovePct: 5,
+        vpApprovalAbovePct: 25,
+        financeReviewAboveAmount: 100000,
+      });
+    });
   });
 });

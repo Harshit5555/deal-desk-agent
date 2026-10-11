@@ -2,21 +2,18 @@ import { ValidationError } from "../errors";
 import { policyStore } from "../store";
 import type { Policy } from "../types";
 
-// The approval engine asks for the policy on every discount check, so we
-// keep a copy in memory instead of re-reading it each time.
-let effective: Policy | null = null;
-
 /** The policy as shown on the admin screen. */
 export function getPolicy(): Policy {
   return policyStore.get();
 }
 
-/** The policy the approval engine applies to new discount requests. */
+/**
+ * The policy the approval engine applies to new discount requests.
+ * Must always match what the admin screen shows, so it is read from the
+ * store on every call and never cached.
+ */
 export function getEffectivePolicy(): Policy {
-  if (!effective) {
-    effective = policyStore.get();
-  }
-  return effective;
+  return policyStore.get();
 }
 
 export function updatePolicy(patch: Partial<Policy>): Policy {

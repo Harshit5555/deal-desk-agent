@@ -57,15 +57,21 @@ A deal needs an approver based on its list amount and the requested discount:
 Defaults: manager above 10%, VP above 25%, finance for deals above $100,000.
 "Above" means strictly greater than.
 
+Approver levels, from most to least senior: VP, Finance, Manager. A person can
+approve or reject deals at their own level or any level below it, so a VP can
+decide a finance deal but finance cannot approve or reject a VP deal.
+
 ## API
 
 | Method | Path | What it does |
 | --- | --- | --- |
-| GET | /api/deals?status= | List deals, optionally by status |
+| GET | /api/deals?status=&region=&team= | List deals, optionally by status, region and team |
+| GET | /api/queue?region=&team= | Pending deals, biggest first, with count and money waiting |
+| GET | /api/deals/needs-review | Auto approved deals the current policy would send to an approver |
 | GET | /api/deals/:id | One deal |
 | POST | /api/deals/:id/propose-discount | Body `{ discountPct }`, runs the policy |
-| POST | /api/deals/:id/approve | Body `{ approver, comment? }` |
-| POST | /api/deals/:id/reject | Body `{ approver, comment? }` |
+| POST | /api/deals/:id/approve | Body `{ approver, approverLevel, comment? }`. Re-checks the current policy; 403 if the level is too low |
+| POST | /api/deals/:id/reject | Body `{ approver, approverLevel, comment? }`. Same re-check and level rule as approve |
 | GET | /api/policy | Current policy |
 | PUT | /api/policy | Update any of the three thresholds |
 

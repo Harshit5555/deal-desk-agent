@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ValidationError } from "../src/errors";
-import { getPolicy, updatePolicy } from "../src/services/policyService";
+import { getEffectivePolicy, getPolicy, updatePolicy } from "../src/services/policyService";
 import { resetStore } from "../src/store";
 
 describe("policyService", () => {
@@ -33,5 +33,14 @@ describe("policyService", () => {
 
   it("rejects negative values", () => {
     expect(() => updatePolicy({ financeReviewAboveAmount: -1 })).toThrow(ValidationError);
+  });
+
+  it("gives the approval engine the same policy the admin screen shows after an update", () => {
+    expect(getEffectivePolicy()).toEqual(getPolicy());
+
+    updatePolicy({ managerApprovalAbovePct: 5, financeReviewAboveAmount: 50000 });
+
+    expect(getEffectivePolicy()).toEqual(getPolicy());
+    expect(getEffectivePolicy().managerApprovalAbovePct).toBe(5);
   });
 });
